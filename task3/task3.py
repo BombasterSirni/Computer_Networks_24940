@@ -33,7 +33,7 @@ dts = driver.find_elements(By.TAG_NAME, "dt")
 # Превью статьи (название, авторы, предмет статьи) отмечены тегом dd
 dds = driver.find_elements(By.TAG_NAME, "dd")
 
-for (article_num_container, aritcle_desc_container) in zip(dts, dds):
+for (article_num_container, article_desc_container) in zip(dts, dds):
     try:
 
         # Парсинг номеров статей
@@ -46,7 +46,7 @@ for (article_num_container, aritcle_desc_container) in zip(dts, dds):
 
         # Парсинг заголовка
         article_title = ""
-        title_elem = aritcle_desc_container.find_elements(
+        title_elem = article_desc_container.find_elements(
             By.CSS_SELECTOR, ".list-title.mathjax")
         if title_elem:
             article_title = title_elem[0].text.strip()
@@ -55,23 +55,23 @@ for (article_num_container, aritcle_desc_container) in zip(dts, dds):
 
         # Парсинг Авторов
         article_authors = ""
-        authors_elem = aritcle_desc_container.find_elements(
+        authors_elem = article_desc_container.find_elements(
             By.CSS_SELECTOR, ".list-authors")
         if authors_elem:
             article_authors = authors_elem[0].text.strip()
             article_authors = re.sub(
-                r'Authors?:\s*', '', article_authors, re.IGNORECASE).strip()
+                r'^Authors?:\s*', '', article_authors, flags=re.IGNORECASE).strip()
         else:
             article_authors = "Unknown"
 
         # Парсинг предмета статьи
         article_subjects = ""
-        article_subjects_elem = aritcle_desc_container.find_elements(
+        article_subjects_elem = article_desc_container.find_elements(
             By.CSS_SELECTOR, ".list-subjects")
         if article_subjects_elem:
             article_subjects = article_subjects_elem[0].text.strip()
             article_subjects = re.sub(
-                r'^Subjects:\s*', '', article_subjects, re.IGNORECASE).strip()
+                r'^Subjects:\s*', '', article_subjects, flags=re.IGNORECASE).strip()
         else:
             article_subjects = "Unknown"
 
