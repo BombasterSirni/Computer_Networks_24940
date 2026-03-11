@@ -3,102 +3,163 @@ import re
 
 import pandas as pd
 from selenium import webdriver
-# Для работы с gecko вебдрайвером firefox
 from selenium.webdriver.firefox.service import Service
-# Для поиска объекта на странице с помощью выбранной стратегии из By
 from selenium.webdriver.common.by import By
 
 
-webdriver_path = '/home/covo43k/study/year_2/comp_networks/task3/geckodriver'
-service = Service(webdriver_path)
-options = webdriver.FirefoxOptions()
-options.add_argument('--headless')
-driver = webdriver.Firefox(service=service, options=options)
-
-data = []
-
-print("-------------------Скрейпинг Arxiv.org/cs--------------------")
-show = int(input(
-    "Укажите количество статей для отображения (25, 50, 100, 250, 500, 1000, 2000): "))
-skip = int(input(
-    f"Укажите номер статьи кратный {show},  (номер статьи, с которой отображаются {show} статей): "))
+def init_driver(geckodriver_path: str) -> webdriver.Firefox:
+    """Инициализирует и возвращает headless Firefox webdriver"""
+    service = Service(geckodriver_path)
+    options = webdriver.FirefoxOptions()
+    options.add_argument('--headless')
+    return webdriver.Firefox(service=service, options=options)
 
 
-arxiv_page_url = f"https://arxiv.org/list/cs/recent?skip={skip}&show={show}"
-driver.get(arxiv_page_url)
-time.sleep(3.5)
+def get_pagination_parameters() -> tuple[int, int]:
+    """Запрашивает у пользователя параметры пагинации (show и skip)"""
+    print("-------------------Скрейпинг Arxiv.org/cs--------------------")
 
-# Номера статей отмечены тегом dt
-dts = driver.find_elements(By.TAG_NAME, "dt")
-# Превью статьи (название, авторы, предмет статьи) отмечены тегом dd
-dds = driver.find_elements(By.TAG_NAME, "dd")
+    valid_show = {25, 50, 100, 250, 500, 1000, 2000}
+    while True:
+        try:
+            show = int(input(
+                "Укажите количество статей для отображения (25, 50, 100, 250, 500, 1000, 2000): "))
+            if show not in valid_show:
+                print(
+                    "Недопустимое значение. Выберите одно из: 25, 50, 100, 250, 500, 1000, 2000")
+                continue
+            break
+        except ValueError:
+            print("Введите число")
 
-for (article_num_container, article_desc_container) in zip(dts, dds):
+    skip = int(
+        input(f"Укажите номер статьи кратный {show} (с какой начинать): "))
+
+    return show, skip
+
+
+def build_arxiv_url(skip: int, show: int) -> str:
+    """Формирует URL страницы списка arXiv с заданными параметрами пагинации"""
+    return f"https://arxiv.org/list/cs/recent?skip={skip}&show={show}"
+
+
+def parse_article_number(dt_element) -> str:
+    """Извлекает arXiv ID из элемента dt"""
+    id_elems = dt_element.find_elements(By.CSS_SELECTOR, "a[href^='/abs/']")
+    if not id_elems:
+        return ""
+    return id_elems[0].text.strip().replace("arXiv:", "").strip()
+
+
+def parse_article_data(dd_element) -> dict:
+    """
+    Извлекает основную информацию о статье из элемента dd
+    Возвращает словарь с данными или значения по умолчанию при отсутствии
+    """
+    data = {
+        "title": "Unknown",
+        "authors": "Unknown",
+        "subjects": "Unknown"
+    }
+
+    # Заголовок
+    title_elems = dd_element.find_elements(
+        By.CSS_SELECTOR, ".list-title.mathjax")
+    if title_elems:
+        data["title"] = title_elems[0].text.strip()
+
+    # Авторы
+    authors_elems = dd_element.find_elements(By.CSS_SELECTOR, ".list-authors")
+    if authors_elems:
+        text = authors_elems[0].text.strip()
+        text = re.sub(r'^Authors?:\s*', '', text, flags=re.IGNORECASE).strip()
+        data["authors"] = text
+
+    # Предметы
+    subjects_elems = dd_element.find_elements(
+        By.CSS_SELECTOR, ".list-subjects")
+    if subjects_elems:
+        text = subjects_elems[0].text.strip()
+        text = re.sub(r'^Subjects:\s*', '', text, flags=re.IGNORECASE).strip()
+        data["subjects"] = text
+
+    return data
+
+
+def scrape_arxiv_page(driver, url: str) -> list[dict]:
+    """Основная функция скрапинга одной страницы списка статей"""
+    print(f"Загружаю страницу: {url}")
+    driver.get(url)
+    time.sleep(3.5)
+
+    data = []
+
     try:
+        dts = driver.find_elements(By.TAG_NAME, "dt")
+        dds = driver.find_elements(By.TAG_NAME, "dd")
 
-        # Парсинг номеров статей
-        article_id = ""
-        id_elem = article_num_container.find_elements(
-            By.CSS_SELECTOR, "a[href^='/abs/']")
-        if id_elem:
-            article_id_text = id_elem[0].text.strip()
-            article_id = article_id_text.replace("arXiv:", "").strip()
+        if len(dts) != len(dds):
+            print(f"Внимание: количество dt ({len(dts)}) ≠ dd ({len(dds)})")
 
-        # Парсинг заголовка
-        article_title = ""
-        title_elem = article_desc_container.find_elements(
-            By.CSS_SELECTOR, ".list-title.mathjax")
-        if title_elem:
-            article_title = title_elem[0].text.strip()
-        else:
-            article_title = "Unknown"
+        for dt, dd in zip(dts, dds):
+            try:
+                article_id = parse_article_number(dt)
+                if not article_id:
+                    continue
 
-        # Парсинг Авторов
-        article_authors = ""
-        authors_elem = article_desc_container.find_elements(
-            By.CSS_SELECTOR, ".list-authors")
-        if authors_elem:
-            article_authors = authors_elem[0].text.strip()
-            article_authors = re.sub(
-                r'^Authors?:\s*', '', article_authors, flags=re.IGNORECASE).strip()
-        else:
-            article_authors = "Unknown"
+                article_data = parse_article_data(dd)
 
-        # Парсинг предмета статьи
-        article_subjects = ""
-        article_subjects_elem = article_desc_container.find_elements(
-            By.CSS_SELECTOR, ".list-subjects")
-        if article_subjects_elem:
-            article_subjects = article_subjects_elem[0].text.strip()
-            article_subjects = re.sub(
-                r'^Subjects:\s*', '', article_subjects, flags=re.IGNORECASE).strip()
-        else:
-            article_subjects = "Unknown"
+                record = {
+                    "arxiv_id": article_id,
+                    "title": article_data["title"],
+                    "Authors": article_data["authors"],
+                    "subjects": article_data["subjects"],
+                    "url": f"https://arxiv.org/abs/{article_id}"
+                }
+                data.append(record)
 
-        data.append({
-            "arxiv_id": article_id,
-            "title": article_title,
-            "Authors": article_authors,
-            "subjects": article_subjects,
-            "url": f"https://arxiv.org/abs/{article_id}" if article_id else ""
-        })
+            except Exception as e:
+                print(f"Ошибка при обработке статьи: {e}")
+                continue
 
     except Exception as e:
-        print(f"Ошибка при обработке одной статьи: {e}")
-        continue
+        print(f"Критическая ошибка при загрузке страницы: {e}")
 
-driver.quit()
+    return data
 
 
-if data:
-    df = pd.DataFrame(data)
-    print(f"Собрано статей: {len(df)}")
-    print(f"Вот данные первых 10 статей:\n", df.head(10))
+def main():
+    GECKODRIVER_PATH = '/home/covo43k/study/year_2/comp_networks/task3/geckodriver'
 
-    output_path = f"arxiv_cs_skip{skip}_show{show}.csv"
-    df.to_csv(output_path, index=False, encoding="utf-8")
+    # 1. Получаем параметры от пользователя
+    show, skip = get_pagination_parameters()
 
-    print(f"Данные статей по CS загружены в {output_path}")
+    # 2. Инициализация браузера
+    driver = init_driver(GECKODRIVER_PATH)
 
-else:
-    print("Не найдено ни одной статьи :(")
+    try:
+        # 3. Формируем URL и собираем данные
+        url = build_arxiv_url(skip, show)
+        scraped_data = scrape_arxiv_page(driver, url)
+
+        if not scraped_data:
+            print("Не найдено ни одной статьи :(")
+            return
+
+        # 4. Преобразуем в DataFrame
+        df = pd.DataFrame(scraped_data)
+        print(f"\nСобрано статей: {len(df)}")
+        print("\nПервые 10 строк:")
+        print(df.head(10))
+
+        # 5. Сохраняем результат
+        output_file = f"arxiv_cs_skip{skip}_show{show}.csv"
+        df.to_csv(output_file, index=False, encoding="utf-8")
+        print(f"\nДанные сохранены в: {output_file}")
+
+    finally:
+        driver.quit()
+
+
+if __name__ == "__main__":
+    main()
