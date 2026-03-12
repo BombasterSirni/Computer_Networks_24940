@@ -10,7 +10,6 @@ from selenium.webdriver.common.by import By
 
 def init_driver(geckodriver_path: str) -> webdriver.Firefox:
     """Инициализирует и возвращает headless Firefox webdriver"""
-    geckodriver_path = Path(__file__).parent / "geckodriver"
     service = Service(str(geckodriver_path.resolve()))
     options = webdriver.FirefoxOptions()
     options.add_argument('--headless')
@@ -131,7 +130,7 @@ def scrape_arxiv_page(driver, url: str) -> list[dict]:
 
 
 def main():
-    GECKODRIVER_PATH = '/home/covo43k/study/year_2/comp_networks/task3/geckodriver'
+    GECKODRIVER_PATH = Path(__file__).parent / "geckodriver"
 
     # 1. Получаем параметры от пользователя
     show, skip = get_pagination_parameters()
