@@ -6,7 +6,9 @@ from typing import List, Dict
 DATABASE_URL = "postgresql+asyncpg://arxiv_user:arxiv_pass@localhost:5432/arxiv_db"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
-AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False)
+
 
 async def save_to_db(articles: List[Dict]):
     async with AsyncSessionLocal() as session:
@@ -21,6 +23,7 @@ async def save_to_db(articles: List[Dict]):
             )
         await session.commit()
         print(f"Сохранено в БД: {len(articles)} статей")
+
 
 async def get_all_data() -> List[Dict]:
     async with AsyncSessionLocal() as session:
