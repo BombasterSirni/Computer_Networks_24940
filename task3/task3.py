@@ -1,5 +1,6 @@
 import time
 import re
+from pathlib import Path
 
 import pandas as pd
 from selenium import webdriver
@@ -9,7 +10,8 @@ from selenium.webdriver.common.by import By
 
 def init_driver(geckodriver_path: str) -> webdriver.Firefox:
     """Инициализирует и возвращает headless Firefox webdriver"""
-    service = Service(geckodriver_path)
+    geckodriver_path = Path(__file__).parent / "geckodriver"
+    service = Service(str(geckodriver_path.resolve()))
     options = webdriver.FirefoxOptions()
     options.add_argument('--headless')
     return webdriver.Firefox(service=service, options=options)
