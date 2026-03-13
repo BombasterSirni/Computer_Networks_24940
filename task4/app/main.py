@@ -2,8 +2,8 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import Optional
 
-from scraper import parse_arxiv
-from database import save_to_db, get_all_data
+from app.scraper import parse_arxiv
+from app.database import save_to_db, get_all_data
 
 
 app = FastAPI(title="Arxiv Parser API")
