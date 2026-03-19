@@ -15,7 +15,7 @@ fi
 docker run -d --name arxiv-api --network arxiv-net -p 8000:8000 arxiv-api
 echo "Приложение запущено на порту 8000"
 
-# Запускаем Nginx-прокси (80 порт)
+
 docker run -d --name nginx-proxy --network arxiv-net -p 80:80 \
   -v "$(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:alpine
 echo "Прокси запущен на порту 80"
