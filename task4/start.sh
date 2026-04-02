@@ -68,4 +68,4 @@ docker run -d \
 
 echo ""
 echo "Проект успешно запущен!"
-echo "Тест: http://127.0.0.1/parse?url=https://arxiv.org/list/cs/recent?skip=0&show=5"
+echo "Тест: http://127.0.0.1/parse?url=https://arxiv.org/list/cs/recent?skip=0&show=100"
