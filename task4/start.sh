@@ -2,10 +2,6 @@
 
 echo "=== Запуск Arxiv Parser API ==="
 
-# Очистка старых контейнеров приложения и прокси
-echo "Очищаем старые контейнеры..."
-docker rm -f arxiv-api nginx-proxy 2>/dev/null || true
-
 # Создаём сеть
 if [ "$(docker network ls -q -f name=arxiv-net)" = "" ]; then
     echo "Создаём сеть arxiv-net..."

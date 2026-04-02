@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
+from urllib.parse import unquote
 
 from app.scraper import parse_arxiv
 from app.database import save_to_db, get_all_data
@@ -16,10 +17,19 @@ class ParseResponse(BaseModel):
     error_detail: Optional[str] = None
 
 
-@app.get("/parse", response_model=ParseResponse)
-async def parse_endpoint(url: str = Query(..., description="Ссылка на arxiv")):
+@app.get("/parse")
+async def parse_and_save(request: Request):
+
+    raw_url = str(request.query_params).replace("url=", "")
+    url = unquote(raw_url)
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+
+    print(f"[DEBUG] Получен URL: {url}")
+
     try:
         articles = parse_arxiv(url)
+
         if articles:
             await save_to_db(articles)
             return {
@@ -28,6 +38,7 @@ async def parse_endpoint(url: str = Query(..., description="Ссылка на ar
                 "articles_saved": len(articles)
             }
         return {"status": "error", "message": "Статей не найдено"}
+
     except Exception as e:
         return {"status": "error", "message": "Ошибка", "error_detail": str(e)}
 

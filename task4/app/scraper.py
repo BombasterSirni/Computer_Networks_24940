@@ -3,6 +3,8 @@ import re
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 def parse_arxiv(url: str):
@@ -21,6 +23,7 @@ def parse_arxiv(url: str):
     try:
         print(f"Открываю: {url}")
         driver.get(url)
+    
         time.sleep(4)
 
         dts = driver.find_elements(By.TAG_NAME, "dt")
