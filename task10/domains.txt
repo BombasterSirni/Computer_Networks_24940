@@ -1,0 +1,5 @@
+google.com
+yandex.ru
+wikipedia.org
+github.com
+cloudflare.com
